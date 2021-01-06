@@ -28,6 +28,6 @@ if __name__ == "__main__":
     print(f"Shape of test data: {test.shape}")
 
     # save the datasets
-    train.to_pickle("data/modelling_data/train.pkl")
-    valid.to_pickle("data/modelling_data/valid.pkl")
-    test.to_pickle("data/modelling_data/test.pkl")
+    train.to_pickle("data/train.pkl")
+    valid.to_pickle("data/valid.pkl")
+    test.to_pickle("data/test.pkl")

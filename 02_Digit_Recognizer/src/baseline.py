@@ -10,9 +10,9 @@ from . import utils
 
 if __name__ == "__main__":
     # load the dataset
-    train_df = pd.read_pickle("data/modelling_data/train.pkl")
-    valid_df = pd.read_pickle("data/modelling_data/valid.pkl")
-    test_df = pd.read_pickle("data/modelling_data/test.pkl")
+    train_df = pd.read_pickle("data/train.pkl")
+    valid_df = pd.read_pickle("data/valid.pkl")
+    test_df = pd.read_pickle("data/test.pkl")
 
     # create mean values for pixel
     mean_tensor = utils.mean_values(train_df, "label")

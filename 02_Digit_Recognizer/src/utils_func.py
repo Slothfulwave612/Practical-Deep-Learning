@@ -3,18 +3,17 @@ __author__: Anmol_Durgapal(@slothfulwave612)
 
 Python module containing utility functions.
 """
-
-# required packages and modules
+# required packages/modules
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from matplotlib import colors
+from tqdm import tqdm
 
 from sklearn import metrics
 
 import torch
-from torch import nn
-
-from tqdm import tqdm
+import torch.nn as nn
 
 
 def mean_values(df, label):
@@ -172,125 +171,52 @@ def calculate_accuracy_baseline(df, mean_tensor, label):
     )
 
 
-def model_training_ann(
-    model, train_df, label, valid_df=None,
-    epochs=500, lr=0.001, use_gpu=False
+def plot_over_epochs(
+    train_list, valid_list, title=None, ylabel=None, path=None
 ):
     """
-    Function to train the model for ANN.
+    Function to plot a line plot for train and valid stats.
 
     Args:
-        model: PyTorch Model.
-        train_df (pandas.DataFrame): train-data values.
-        label (str): lable column name.
-        valid_df (pandas.DataFrame, optional): valid-data values.
-                                               Defaults to None.
-        epochs (int, optional): number of iterations. Defaults to 500.
-        lr (float, optional): learning rate. Defaults to 0.01.
-        use_gpu (bool, optional): to use GPU or not. Defaults to False.
+        train_list (list): containing training stats.
+        valid_list (list): containing validation stats.
+        title (str, optional): title of the plot. Defaults to None.
+        ylabel (str, optional): ylabel for the plot. Defaults to None.
+        path (str, optional): path where plot will be saved. Defaults to None.
+
+    Returns:
+        figure.Figure: figure object.
+        axes.Axes: axes object.
     """
-    # loss function
-    loss_fn = nn.CrossEntropyLoss()
+    # default font-family
+    rcParams["font.family"] = "serif"
 
-    # optimizer
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=0.001
+    # create subplot
+    fig, ax = plt.subplots(facecolor="#F2F2F2", figsize=(12, 8))
+    ax.set_facecolor("#F2F2F2")
+
+    # plot train stats
+    ax.plot(
+        range(len(train_list)), train_list,
+        color="crimson", ls="--", label="Train"
+    )
+    ax.plot(
+        range(len(valid_list)), valid_list,
+        color="#222222", ls=":", label="Valid"
     )
 
-    # split train data to X and y
-    X_train = torch.tensor(
-        train_df.drop(label, axis=1).values
-    )
-    y_train = torch.tensor(
-        train_df[label].values
-    )
+    # set title and labels
+    ax.set_title(title, size=20, color="#121212")
+    ax.set_xlabel("Epochs", size=14, color="#121212")
+    ax.set_ylabel(ylabel, size=14, color="#121212")
 
-    if valid_df is not None:
-        # split valid data to X and y
-        X_valid = torch.tensor(
-            valid_df.drop(label, axis=1).values
-        )
-        y_valid = torch.tensor(
-            valid_df[label].values
-        )
+    # legend for the plot
+    ax.legend(loc=0)
 
-    if use_gpu:
+    # grid
+    ax.grid()
 
-        # check for GPU
-        if torch.cuda.is_available():
-            print(f"System has {torch.cuda.get_device_name()}")
-            print()
-            print("Transfering Training Data to GPU")
+    if path:
+        fig.savefig(path, dpi=600, bbox_inches="tight")
 
-            # transfer training data to GPU
-            X_train = X_train.cuda()
-            y_train = y_train.cuda()
-
-            if valid_df is not None:
-                print()
-                print("Transfering Validation Data to GPU")
-
-                # transfer validation data to GPU
-                X_valid = X_valid.cuda()
-                y_valid = y_valid.cuda()
-
-            # transfer model architecture to GPU
-            model = model.cuda()
-
-        else:
-            print("GPU not available")
-
-    # train the model
-    for i in range(epochs):
-
-        # forward pass --> generate predictions
-        y_pred_train = model.forward_pass(X_train.float())
-
-        # convert y_pred_train from probability to class-labels
-        y_pred_train = y_pred_train.argmax(axis=1)
-
-        # calculate loss on training data
-        print(y_pred_train)
-        print(y_train)
-        train_loss = loss_fn(y_pred_train, y_train)
-
-        if valid_df is not None:
-
-            # generate predictions on validation data
-            y_pred_valid = model.forward_pass(X_valid.float())
-
-            # convert y_pred_valid from probability to class-labels
-            y_pred_valid = y_pred_valid.argmax(axis=1)
-
-        if i % 101 == 0:
-
-            # calculate accuracy
-            train_acc = metrics.accuracy_score(
-                y_train, y_pred_train
-            )
-
-            if valid_df is not None:
-                # valid accuracy
-                valid_acc = metrics.accuracy_score(
-                    y_valid, y_pred_valid
-                )
-
-                # valid loss
-                valid_loss = loss_fn(y_pred_valid, y_valid)
-
-            print()
-            print(f"Epochs: {i}\nTraining Loss: {train_loss} | \
-                Training Acc: {train_acc}")
-
-            if valid_df:
-                print(f"Validation Loss: {valid_loss} | \
-                    Validation Acc: {valid_acc}")
-
-        # zero the gradients
-        optimizer.zero_grad()
-
-        # backward pass
-        train_loss.backward()
-
-        # update weights
-        optimizer.step()
+    return fig, ax
