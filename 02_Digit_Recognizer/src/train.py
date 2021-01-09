@@ -81,19 +81,20 @@ def run_training(target, save_model=False):
         num_features=X_train.shape[1],
         num_targets=10,
         num_layers=5,
-        hidden_size=100,
+        hidden_size=70,
         dropout=0
     )
 
     # transfer to GPU
     model = model.to(DEVICE)
 
-    # make an optimizer
-    optimizer = torch.optim.Adamax(model.parameters(), lr=1e-8)
+    # make an optimizer, Adamax --> 97   Adam --> 98.3   RMSprop --> 98.7 (5, 100)
+    # RMSprop(5, 80) --> 98.8  RMSprop(5, 70) --> 98.9
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=1e-8)
 
     # learning rate scheduler
     lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
-        optimizer, max_lr=0.001, total_steps=50
+        optimizer, max_lr=0.001, total_steps=EPOCHS
     )
 
     # init object of Engine class
