@@ -15,7 +15,7 @@ from . import utils_class, utils_func
 # defualt values
 DEVICE = "cuda"
 EPOCHS = 50
-BATCH_SIZE = 275
+BATCH_SIZE = 350
 
 
 def run_training(target, save_model=False):
@@ -31,6 +31,8 @@ def run_training(target, save_model=False):
     train_df = pd.read_pickle("data/train.pkl")
     valid_df = pd.read_pickle("data/valid.pkl")
     test_df = pd.read_pickle("data/test.pkl")
+
+    print(train_df.shape, valid_df.shape, test_df.shape)
 
     # split for training data
     X_train = train_df.drop(target, axis=1).to_numpy()
@@ -61,7 +63,7 @@ def run_training(target, save_model=False):
 
     # create data loaders for train data set
     train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=BATCH_SIZE
+        train_dataset, batch_size=BATCH_SIZE, shuffle=True
     )
 
     # create data loaders for valid data set
@@ -79,24 +81,31 @@ def run_training(target, save_model=False):
         num_features=X_train.shape[1],
         num_targets=10,
         num_layers=5,
-        hidden_size=128,
-        dropout=0.15
+        hidden_size=100,
+        dropout=0
     )
 
     # transfer to GPU
     model = model.to(DEVICE)
 
     # make an optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adamax(model.parameters(), lr=1e-8)
+
+    # learning rate scheduler
+    lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer, max_lr=0.001, total_steps=50
+    )
 
     # init object of Engine class
-    engine = utils_class.Engine_ann(model, optimizer, DEVICE)
+    engine = utils_class.Engine_ann(
+        model, optimizer, lr_scheduler, DEVICE
+    )
 
     # init a best loss
     best_loss = np.inf
 
     # init early stopping iter and counter
-    early_stopping_iter, early_stopping_counter = 10, 0
+    early_stopping_iter, early_stopping_counter = 15, 0
 
     # init empty list for loss and accuracy
     loss_list_train, acc_list_train = [], []
@@ -123,13 +132,13 @@ def run_training(target, save_model=False):
             best_loss = valid_loss
 
             if save_model:
-                torch.save(model.state_dict(), f"model_{epoch}.pt")
+                torch.save(model, f"models/model_ann.pt")
 
         else:
             early_stopping_counter += 1
 
-        if early_stopping_counter == early_stopping_iter:
-            break
+        # if early_stopping_counter == early_stopping_iter:
+        #     break
 
     # test loss and accuracy
     test_loss, test_acc = engine.evaluate(test_loader)
@@ -147,7 +156,9 @@ def run_training(target, save_model=False):
         "plots/ann_loss.jpg"
     )
 
+    torch.save(model, f"models/model_ann.pt")
+
 
 if __name__ == "__main__":
     torch.manual_seed(42)
-    run_training("label")
+    run_training("label", True)

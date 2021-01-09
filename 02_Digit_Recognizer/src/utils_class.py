@@ -46,17 +46,19 @@ class Engine_ann:
     class to train and evaluate our ANN model.
     """
 
-    def __init__(self, model, optimizer, device):
+    def __init__(self, model, optimizer, lr_scheduler, device):
         """
         Function to init the object of the class.
 
         Args:
             model: PyTorch model.
             optimizer: optimizer function.
+            lr_scheduler: learning rate scheduler.
             device: cpu or gpu
         """
         self.model = model
         self.optimizer = optimizer
+        self.lr_scheduler = lr_scheduler
         self.device = device
 
     @staticmethod
@@ -135,6 +137,8 @@ class Engine_ann:
             final_loss += loss.item()
             final_acc += acc.item()
 
+        self.lr_scheduler.step()
+
         return round(final_loss / len(data_loader), 3), \
             round(final_acc / len(data_loader), 3)
 
@@ -205,9 +209,10 @@ class Model(nn.Module):
                 in_features=num_features, out_features=hidden_size
             )
         )
+        torch.nn.init.kaiming_uniform_(layers[-1].weight)
         layers.append(nn.BatchNorm1d(hidden_size))
         layers.append(nn.Dropout(dropout))
-        layers.append(nn.ReLU())
+        layers.append(nn.ELU())
 
         # append hidden layers
         for _ in range(num_layers):
@@ -216,9 +221,10 @@ class Model(nn.Module):
                     in_features=hidden_size, out_features=hidden_size
                 )
             )
+            torch.nn.init.kaiming_uniform_(layers[-1].weight)
             layers.append(nn.BatchNorm1d(hidden_size))
             layers.append(nn.Dropout(dropout))
-            layers.append(nn.ReLU())
+            layers.append(nn.ELU())
 
         # append output layer
         layers.append(
@@ -226,6 +232,7 @@ class Model(nn.Module):
                 in_features=hidden_size, out_features=num_targets
             )
         )
+        torch.nn.init.kaiming_uniform_(layers[-1].weight)
         layers.append(
             nn.Softmax(dim=1)
         )

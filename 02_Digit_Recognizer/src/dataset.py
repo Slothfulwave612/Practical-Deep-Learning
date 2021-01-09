@@ -6,21 +6,26 @@ Python module for operating with dataset.
 
 import pandas as pd
 
+# default value
+RANDOM_SEED = 42
+
 if __name__ == "__main__":
     # load the datasets
     train_data = pd.read_csv("input/train.csv")
 
     # shuffle the train dataset
-    train_data = train_data.sample(frac=1).reset_index(drop=True)
+    train_data = train_data.sample(
+        frac=1, random_state=RANDOM_SEED
+    ).reset_index(drop=True)
 
     # normalize the data
     temp_data = train_data.loc[:, train_data.columns != "label"] / 255.0
     temp_data["label"] = train_data["label"]
 
     # create train, validation and test data set
-    train, valid, test = temp_data.loc[0:38000].copy().reset_index(drop=True),\
-        temp_data.loc[38001:40000].copy().reset_index(drop=True),\
-        temp_data.loc[40000:].copy().reset_index(drop=True)
+    train, valid, test = temp_data.loc[0:39000].copy().reset_index(drop=True),\
+        temp_data.loc[39001:40000].copy().reset_index(drop=True),\
+        temp_data.loc[40001:].copy().reset_index(drop=True)
 
     # shape of datasets
     print(f"Shape of train data: {train.shape}")
