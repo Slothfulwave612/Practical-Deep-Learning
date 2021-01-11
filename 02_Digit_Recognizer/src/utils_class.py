@@ -5,6 +5,9 @@ Python module containing utility classes.
 """
 
 # required packages and modules
+import numpy as np
+import json
+
 import torch
 import torch.nn as nn
 
@@ -67,8 +70,8 @@ class Engine_ann:
         Function to compute the loss.
 
         Args:
-            outputs: predicted-label values.
-            targets: real-label values.
+            outputs: predicted probabilities.
+            targets: true-label values.
 
         Return:
             loss value.
@@ -83,8 +86,8 @@ class Engine_ann:
         Function to compute the loss.
 
         Args:
-            targets: real-label values.
-            outputs: predicted-label values.
+            targets: true-label values.
+            outputs: predicted probabilities.
 
         Return:
             accuracy score.
@@ -142,12 +145,13 @@ class Engine_ann:
         return round(final_loss / len(data_loader), 3), \
             round(final_acc / len(data_loader), 3)
 
-    def evaluate(self, data_loader):
+    def evaluate(self, data_loader, save_results=False):
         """
         Function for evaluation.
 
         Args:
             data_loader (dataloader.DataLoader): contains the required data.
+            save_results (bool, optional): to save wrongly classified images.
 
         Returns:
             loss
@@ -156,6 +160,10 @@ class Engine_ann:
 
         # init loss and accuracy
         final_loss, final_acc = 0, 0
+
+        # init an empty list
+        if save_results:
+            results = []
 
         for data in data_loader:
             # inputs and targets
@@ -174,6 +182,36 @@ class Engine_ann:
             # add to final loss and accuracy
             final_loss += loss.item()
             final_acc += acc.item()
+
+            if save_results:
+                # get predicted labels
+                outputs = outputs.argmax(axis=1)
+
+                # get index where images are wrongly classified
+                index = np.where(outputs.cpu() != targets.cpu())[0]
+
+                # transfer inputs to cpu
+                inputs = inputs.cpu()
+
+                for i in range(len(index)):
+                    # get pixel value of the image
+                    image = np.array(inputs[index[i]]).tolist()
+
+                    # get target value
+                    target = int(targets[index[i]].item())
+
+                    # get predicted value
+                    pred_val = outputs[index[i]].item()
+
+                    results.append({
+                        "image": image, "target": target,
+                        "prediction": pred_val
+                    })
+
+        # save the file as json
+        if save_results:
+            with open("data/wrong_pred.json", "w") as json_file:
+                json.dump(results, json_file)
 
         return round(final_loss / len(data_loader), 3), \
             round(final_acc / len(data_loader), 3)
@@ -206,25 +244,27 @@ class Model(nn.Module):
         # append input layer
         layers.append(
             nn.Linear(
-                in_features=num_features, out_features=hidden_size
+                in_features=num_features, out_features=hidden_size,
+                bias=False
             )
         )
-        torch.nn.init.kaiming_uniform_(layers[-1].weight)
+        torch.nn.init.xavier_normal_(layers[-1].weight)
         layers.append(nn.BatchNorm1d(hidden_size))
         layers.append(nn.Dropout(dropout))
-        layers.append(nn.ELU())
+        layers.append(nn.SELU())
 
         # append hidden layers
         for _ in range(num_layers):
             layers.append(
                 nn.Linear(
-                    in_features=hidden_size, out_features=hidden_size
+                    in_features=hidden_size, out_features=hidden_size,
+                    bias=False
                 )
             )
-            torch.nn.init.kaiming_uniform_(layers[-1].weight)
+            torch.nn.init.xavier_normal_(layers[-1].weight)
             layers.append(nn.BatchNorm1d(hidden_size))
             layers.append(nn.Dropout(dropout))
-            layers.append(nn.ELU())
+            layers.append(nn.SELU())
 
         # append output layer
         layers.append(
@@ -232,10 +272,10 @@ class Model(nn.Module):
                 in_features=hidden_size, out_features=num_targets
             )
         )
-        torch.nn.init.kaiming_uniform_(layers[-1].weight)
-        layers.append(
-            nn.Softmax(dim=1)
-        )
+        torch.nn.init.xavier_normal_(layers[-1].weight)
+        # layers.append(
+        #     nn.Softmax(dim=1)
+        # )
 
         # make model
         self.model = nn.Sequential(*layers)

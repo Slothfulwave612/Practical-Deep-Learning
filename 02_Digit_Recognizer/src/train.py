@@ -80,16 +80,15 @@ def run_training(target, save_model=False):
     model = utils_class.Model(
         num_features=X_train.shape[1],
         num_targets=10,
-        num_layers=5,
+        num_layers=7,
         hidden_size=70,
-        dropout=0
+        dropout=0.05
     )
 
     # transfer to GPU
     model = model.to(DEVICE)
 
-    # make an optimizer, Adamax --> 97   Adam --> 98.3   RMSprop --> 98.7 (5, 100)
-    # RMSprop(5, 80) --> 98.8  RMSprop(5, 70) --> 98.9
+    # make an optimizer
     optimizer = torch.optim.RMSprop(model.parameters(), lr=1e-8)
 
     # learning rate scheduler
@@ -102,20 +101,19 @@ def run_training(target, save_model=False):
         model, optimizer, lr_scheduler, DEVICE
     )
 
-    # init a best loss
-    best_loss = np.inf
-
-    # init early stopping iter and counter
-    early_stopping_iter, early_stopping_counter = 15, 0
-
     # init empty list for loss and accuracy
     loss_list_train, acc_list_train = [], []
     loss_list_valid, acc_list_valid = [], []
 
-    for epoch in range(EPOCHS):
+    for epoch in range(1, EPOCHS + 1):
+        if epoch == EPOCHS:
+            save_results = True
+        else:
+            save_results = False
+
         # train and valid loss and accuracy
         train_loss, train_acc = engine.train(train_loader)
-        valid_loss, valid_acc = engine.evaluate(valid_loader)
+        valid_loss, valid_acc = engine.evaluate(valid_loader, save_results)
 
         # append the info
         loss_list_train.append(train_loss)
@@ -127,19 +125,6 @@ def run_training(target, save_model=False):
         print(f"Train Loss: {train_loss}, Valid Loss: {valid_loss}")
         print(f"Train Acc: {train_acc}, Valid Acc: {valid_acc}")
         print()
-
-        # update the loss
-        if valid_loss < best_loss:
-            best_loss = valid_loss
-
-            if save_model:
-                torch.save(model, f"models/model_ann.pt")
-
-        else:
-            early_stopping_counter += 1
-
-        # if early_stopping_counter == early_stopping_iter:
-        #     break
 
     # test loss and accuracy
     test_loss, test_acc = engine.evaluate(test_loader)
@@ -157,7 +142,7 @@ def run_training(target, save_model=False):
         "plots/ann_loss.jpg"
     )
 
-    torch.save(model, f"models/model_ann.pt")
+    torch.save(model, f"models/model_ann_final.pt")
 
 
 if __name__ == "__main__":

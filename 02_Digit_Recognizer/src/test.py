@@ -1,4 +1,4 @@
-import pandas as pd 
+import pandas as pd
 import torch
 
 if __name__ == "__main__":
@@ -16,22 +16,22 @@ if __name__ == "__main__":
     )
 
     # load model
-    model = torch.load("models/model_ann.pt")
+    model = torch.load("models/model_ann_final.pt")
 
     model.eval()
 
     test_preds = torch.LongTensor()
 
     for i, data in enumerate(test_loader):
-        
+
         data = data.to("cuda")
-        
+
         output = model(data)
 
         preds = output.to("cpu").argmax(axis=1)
 
         test_preds = torch.cat((test_preds, preds), dim=0)
-    
+
     sample = pd.read_csv("input/sample_submission.csv")
 
     sample["Label"] = test_preds.numpy()
