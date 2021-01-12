@@ -6,6 +6,8 @@ Python module containing utility classes.
 
 # required packages and modules
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
 import json
 
 import torch
@@ -251,7 +253,7 @@ class Model(nn.Module):
         torch.nn.init.xavier_normal_(layers[-1].weight)
         layers.append(nn.BatchNorm1d(hidden_size))
         layers.append(nn.Dropout(dropout))
-        layers.append(nn.SELU())
+        layers.append(nn.ReLU())
 
         # append hidden layers
         for _ in range(num_layers):
@@ -264,7 +266,7 @@ class Model(nn.Module):
             torch.nn.init.xavier_normal_(layers[-1].weight)
             layers.append(nn.BatchNorm1d(hidden_size))
             layers.append(nn.Dropout(dropout))
-            layers.append(nn.SELU())
+            layers.append(nn.ReLU())
 
         # append output layer
         layers.append(
@@ -273,9 +275,6 @@ class Model(nn.Module):
             )
         )
         torch.nn.init.xavier_normal_(layers[-1].weight)
-        # layers.append(
-        #     nn.Softmax(dim=1)
-        # )
 
         # make model
         self.model = nn.Sequential(*layers)
@@ -288,3 +287,54 @@ class Model(nn.Module):
             x: data.
         """
         return self.model(x)
+
+
+def plot_over_epochs(
+    train_list, valid_list, title=None, ylabel=None, path=None
+):
+    """
+    Function to plot a line plot for train and valid stats.
+
+    Args:
+        train_list (list): containing training stats.
+        valid_list (list): containing validation stats.
+        title (str, optional): title of the plot. Defaults to None.
+        ylabel (str, optional): ylabel for the plot. Defaults to None.
+        path (str, optional): path where plot will be saved. Defaults to None.
+
+    Returns:
+        figure.Figure: figure object.
+        axes.Axes: axes object.
+    """
+    # default font-family
+    rcParams["font.family"] = "serif"
+
+    # create subplot
+    fig, ax = plt.subplots(facecolor="#222222", figsize=(12, 8))
+    ax.set_facecolor("#222222")
+
+    # plot train stats
+    ax.plot(
+        range(len(train_list)), train_list,
+        color="#F2F2F2", ls="--", label="Train"
+    )
+    ax.plot(
+        range(len(valid_list)), valid_list,
+        color="crimson", ls=":", label="Valid"
+    )
+
+    # set title and labels
+    ax.set_title(title, size=20, color="#F2F2F2")
+    ax.set_xlabel("Epochs", size=14, color="#F2F2F2")
+    ax.set_ylabel(ylabel, size=14, color="#F2F2F2")
+
+    # legend for the plot
+    ax.legend(loc=0)
+
+    # grid
+    ax.grid(color="#908C8C")
+
+    if path:
+        fig.savefig(path, dpi=600, bbox_inches="tight")
+
+    return fig, ax

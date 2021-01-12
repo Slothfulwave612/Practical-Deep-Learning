@@ -7,10 +7,11 @@ Python module for training an Artificial Neural Network.
 # import necessary packages/modules
 import numpy as np
 import pandas as pd
+import optuna
 
 import torch
 
-from . import utils_class, utils_func
+from . import utils
 
 # defualt values
 DEVICE = "cuda"
@@ -18,7 +19,7 @@ EPOCHS = 50
 BATCH_SIZE = 350
 
 
-def run_training(target, save_model=False):
+def run_training(target, params=None, save_model=False):
     """
     Function to train ANN.
 
@@ -28,7 +29,7 @@ def run_training(target, save_model=False):
     """
 
     # load the dataset
-    train_df = pd.read_pickle("data/train.pkl")
+    train_df = pd.read_pickle("data/train_aug.pkl")
     valid_df = pd.read_pickle("data/valid.pkl")
     test_df = pd.read_pickle("data/test.pkl")
 
@@ -47,17 +48,17 @@ def run_training(target, save_model=False):
     y_test = test_df[target].to_numpy()
 
     # init object of DigitDataset for train data-set
-    train_dataset = utils_class.DigitDataset(
+    train_dataset = utils.DigitDataset(
         features=X_train, target=y_train
     )
 
     # init object of DigitDataset for valid data-set
-    valid_dataset = utils_class.DigitDataset(
+    valid_dataset = utils.DigitDataset(
         features=X_valid, target=y_valid
     )
 
     # init object of DigitDataset for valid data-set
-    test_dataset = utils_class.DigitDataset(
+    test_dataset = utils.DigitDataset(
         features=X_test, target=y_test
     )
 
@@ -77,19 +78,21 @@ def run_training(target, save_model=False):
     )
 
     # init object to make model
-    model = utils_class.Model(
+    model = utils.Model(
         num_features=X_train.shape[1],
         num_targets=10,
-        num_layers=7,
-        hidden_size=70,
-        dropout=0.05
+        num_layers=params["num_layers"],
+        hidden_size=params["hidden_size"],
+        dropout=params["dropout"]
     )
 
     # transfer to GPU
     model = model.to(DEVICE)
 
     # make an optimizer
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=1e-8)
+    optimizer = torch.optim.RMSprop(
+        model.parameters(), lr=params["learning_rate"]
+    )
 
     # learning rate scheduler
     lr_scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -97,13 +100,16 @@ def run_training(target, save_model=False):
     )
 
     # init object of Engine class
-    engine = utils_class.Engine_ann(
+    engine = utils.Engine_ann(
         model, optimizer, lr_scheduler, DEVICE
     )
 
     # init empty list for loss and accuracy
     loss_list_train, acc_list_train = [], []
     loss_list_valid, acc_list_valid = [], []
+
+    # init best-loss
+    best_loss = np.inf
 
     for epoch in range(1, EPOCHS + 1):
         if epoch == EPOCHS:
@@ -126,25 +132,58 @@ def run_training(target, save_model=False):
         print(f"Train Acc: {train_acc}, Valid Acc: {valid_acc}")
         print()
 
+        if valid_loss < best_loss:
+            best_loss = valid_loss
+
     # test loss and accuracy
     test_loss, test_acc = engine.evaluate(test_loader)
     print(f"Test Loss: {test_loss}, Test Acc: {test_acc}")
 
-    fig, ax = utils_func.plot_over_epochs(
+    fig, ax = utils.plot_over_epochs(
         acc_list_train, acc_list_valid,
         "Accuracy Results", "Accuracy",
         "plots/ann_accuracy.jpg"
     )
 
-    fig, ax = utils_func.plot_over_epochs(
+    fig, ax = utils.plot_over_epochs(
         loss_list_train, loss_list_valid,
         "Loss Results", "Loss",
         "plots/ann_loss.jpg"
     )
 
-    torch.save(model, f"models/model_ann_final.pt")
+    if save_model:
+        torch.save(model, f"models/model_ann.pt")
+
+    return best_loss
+
+
+def objective(trial):
+    params = {
+        "num_layers": trial.suggest_int("num_layers", 1, 15),
+        "hidden_size": trial.suggest_int("hidden_size", 100, 500),
+        "dropout": trial.suggest_uniform("dropout", 0.01, 0.75),
+        "learning_rate": trial.suggest_loguniform("learning_rate", 1e-8, 1e-2)
+    }
+
+    temp_loss = run_training(
+        "label", params, False
+    )
+
+    return temp_loss
 
 
 if __name__ == "__main__":
     torch.manual_seed(42)
-    run_training("label", True)
+    # run_training("label", True)
+
+    study = optuna.create_study(direction="minimize")
+    study.optimize(objective, n_trials=100)
+
+    trial_ = study.best_trial
+
+    print()
+    print("Best Trial:")
+    print(trial_.values)
+    print(trial_.params)
+
+    run_training("label", trial_.params, save_model=True)

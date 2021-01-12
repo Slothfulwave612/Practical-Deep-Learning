@@ -16,7 +16,7 @@ if __name__ == "__main__":
     )
 
     # load model
-    model = torch.load("models/model_ann_final.pt")
+    model = torch.load("models/model_ann.pt")
 
     model.eval()
 
