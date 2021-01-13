@@ -160,7 +160,7 @@ def run_training(target, params=None, save_model=False):
 def objective(trial):
     params = {
         "num_layers": trial.suggest_int("num_layers", 1, 15),
-        "hidden_size": trial.suggest_int("hidden_size", 100, 500),
+        "hidden_size": trial.suggest_int("hidden_size", 100, 400),
         "dropout": trial.suggest_uniform("dropout", 0.01, 0.75),
         "learning_rate": trial.suggest_loguniform("learning_rate", 1e-8, 1e-2)
     }
@@ -176,14 +176,21 @@ if __name__ == "__main__":
     torch.manual_seed(42)
     # run_training("label", True)
 
-    study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=100)
+    # study = optuna.create_study(direction="minimize")
+    # study.optimize(objective, n_trials=100)
 
-    trial_ = study.best_trial
+    # trial_ = study.best_trial
 
-    print()
-    print("Best Trial:")
-    print(trial_.values)
-    print(trial_.params)
+    # print()
+    # print("Best Trial:")
+    # print(trial_.values)
+    # print(trial_.params)
 
-    run_training("label", trial_.params, save_model=True)
+    params = {
+        "num_layers": 5,
+        "hidden_size": 451,
+        "dropout": 0.12028771527906044,
+        "learning_rate": 1.197103353722077e-06
+    }
+
+    run_training("label", params, save_model=True)
