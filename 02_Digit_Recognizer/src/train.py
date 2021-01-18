@@ -177,7 +177,7 @@ if __name__ == "__main__":
     # run_training("label", True)
 
     # study = optuna.create_study(direction="minimize")
-    # study.optimize(objective, n_trials=100)
+    # study.optimize(objective, n_trials=50)
 
     # trial_ = study.best_trial
 
