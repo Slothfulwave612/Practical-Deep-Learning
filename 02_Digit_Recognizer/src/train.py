@@ -154,7 +154,7 @@ def run_training(target, params=None, save_model=False):
     if save_model:
         torch.save(model, f"models/model_ann.pt")
 
-    return best_loss
+    return valid_loss
 
 
 def objective(trial):
@@ -193,4 +193,4 @@ if __name__ == "__main__":
         "learning_rate": 1.197103353722077e-06
     }
 
-    run_training("label", params, save_model=True)
+    run_training("label", params, save_model=False)

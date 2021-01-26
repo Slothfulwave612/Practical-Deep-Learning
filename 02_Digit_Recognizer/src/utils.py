@@ -24,8 +24,8 @@ class DigitDataset:
         Function to initialise the class object.
 
         Args:
-            features (torch.tensor): required feature values.
-            target (torch.tensor): required target values.
+            features (numpy.ndarray): required feature values.
+            target (numpy.ndarray): required target values.
         """
         self.features = features
         self.target = target
@@ -285,7 +285,7 @@ class Model(nn.Module):
 
         Args:
             x: data.
-        """
+        """ 
         return self.model(x)
 
 
